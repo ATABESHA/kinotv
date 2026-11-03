@@ -19,7 +19,7 @@ const BASE='https://1.kinogoline.net/';
 let page='home',history=[],items=[],lastHtml='';
 const app=document.getElementById('app');
 function absolute(u){try{return new URL(u,BASE).href}catch(e){return ''}}
-function safe(u){return /^https:\/\//.test(u)&&new URL(u).hostname.endsWith('kinogoline.net')}
+function safe(u){return /^https:\/\//.test(u)&&(new URL(u).hostname==='kinogoline.net'||new URL(u).hostname.endsWith('.kinogoline.net'))}
 function doc(html){return new DOMParser().parseFromString(html,'text/html')}
 function titleOf(a){return (a.innerText||a.textContent||a.getAttribute('title')||'').trim().replace(/\s+/g,' ')}
 function extract(html){const d=doc(html),seen=new Set(),out=[];d.querySelectorAll('a[href]').forEach(a=>{const href=absolute(a.getAttribute('href'));if(!safe(href)||href===BASE||seen.has(href))return;const img=a.querySelector('img');const name=titleOf(a)||img?.alt||img?.title||'';const poster=img?.getAttribute('data-src')||img?.getAttribute('data-original')||img?.src||'';if(!name&&!poster)return;seen.add(href);out.push({name:name||'Open title',href,poster:absolute(poster),desc:a.getAttribute('title')||''})});return out}
