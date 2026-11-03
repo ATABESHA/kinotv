@@ -11,6 +11,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.JavascriptInterface;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
     private static final String HOME = "https://1.kinogoline.net/";
@@ -46,16 +49,32 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return !url.startsWith("https://1.kinogoline.net/") &&
-                       !url.startsWith("https://www.kinogoline.net/");
+                       !url.startsWith("https://www.kinogoline.net/") &&
+                       !url.startsWith("https://kinogoline.net/");
             }
         });
-        web.loadUrl("file:///android_asset/kinotv.html");
+
+        // Give the custom UI the target site's origin so its same-origin catalogue
+        // requests can be made by WebView without a file:// CORS origin.
+        try (InputStream in = getAssets().open("kinotv.html");
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+            String html = new String(out.toByteArray(), StandardCharsets.UTF_8);
+            web.loadDataWithBaseURL(HOME, html, "text/html", "UTF-8", null);
+        } catch (Exception e) {
+            web.loadData("<h2>KinoTV could not load its interface.</h2>", "text/html", "UTF-8");
+        }
     }
 
     private class TvBridge {
         @JavascriptInterface public void reload() { runOnUiThread(() -> web.evaluateJavascript("loadHome()", null)); }
         @JavascriptInterface public void openExternal(String url) {
-            if (url != null && url.startsWith("https://")) runOnUiThread(() -> web.loadUrl(url));
+            if (url != null && (url.startsWith("https://1.kinogoline.net/") ||
+                url.startsWith("https://www.kinogoline.net/") || url.startsWith("https://kinogoline.net/"))) {
+                runOnUiThread(() -> web.loadUrl(url));
+            }
         }
     }
 
@@ -63,8 +82,7 @@ public class MainActivity extends Activity {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             int key = event.getKeyCode();
             if (key == KeyEvent.KEYCODE_BACK) {
-                if (web != null && web.canGoBack()) web.goBack();
-                else if (web != null) web.evaluateJavascript("goBack()", null);
+                if (web != null) web.evaluateJavascript("goBack()", null);
                 return true;
             }
             if (key == KeyEvent.KEYCODE_DPAD_UP || key == KeyEvent.KEYCODE_DPAD_DOWN ||
