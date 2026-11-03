@@ -10,6 +10,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.JavascriptInterface;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -47,10 +48,12 @@ public class MainActivity extends Activity {
             }
         });
         web.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (!request.isForMainFrame()) return false;
+                return !allowedSite(request.getUrl().toString());
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return !url.startsWith("https://1.kinogoline.net/") &&
-                       !url.startsWith("https://www.kinogoline.net/") &&
-                       !url.startsWith("https://kinogoline.net/");
+                return !allowedSite(url);
             }
         });
 
@@ -66,6 +69,12 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             web.loadData("<h2>KinoTV could not load its interface.</h2>", "text/html", "UTF-8");
         }
+    }
+
+    private boolean allowedSite(String url) {
+        return url.startsWith("https://1.kinogoline.net/") ||
+               url.startsWith("https://www.kinogoline.net/") ||
+               url.startsWith("https://kinogoline.net/");
     }
 
     private class TvBridge {
